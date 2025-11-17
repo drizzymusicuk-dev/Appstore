@@ -1,52 +1,30 @@
-name: Build and Release APK
+name: Build and Upload APK
 
 on:
   push:
-    branches: [ main ]
-    
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Extract ZIP
-        run: unzip appstore-project.zip -d extracted/
-
       - uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: '17'
-
       - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
       - run: chmod +x ./gradlew
-        working-directory: extracted/
-
-      - name: Generate dummy keystore
-        working-directory: extracted/
-        run: |
-          keytool -genkey -v -keystore my-release-key.jks \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -alias my-alias \
-            -dname "CN=Dummy, OU=Dummy, O=Dummy, L=Dummy, ST=Dummy, C=US" \
-            -storepass dummy123 -keypass dummy123
-
-      - name: Build release APK
-        working-directory: extracted/
-        env:
-          SIGNING_KEY_ALIAS: my-alias
-          SIGNING_KEY_PASSWORD: dummy123
-          SIGNING_STORE_PASSWORD: dummy123
-        run: ./gradlew assembleRelease --no-daemon
-
-      - uses: softprops/action-gh-release@v2
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          files: extracted/app/build/outputs/apk/release/app-release.apk
-          generate_release_notes: true
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
